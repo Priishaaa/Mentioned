@@ -36,7 +36,7 @@ The frontend goes on Vercel, the API on Render, and saved reports in Upstash Red
    - `GEMINI_API_KEY`
    - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
    - `ALLOWED_ORIGINS` (your Vercel URL; fill in after step 3)
-3. **Vercel** (vercel.com): New Project → import this repo, keep the root directory. `vercel.json` sets the build. Add the environment variable `VITE_API_URL` = your Render URL, then deploy.
+3. **Vercel** (vercel.com): New Project → import this repo. When Vercel finds two apps, choose **Import single project** for `web` (Vite), not `server`. `web/vercel.json` adds the routing so report links work. Add the environment variable `VITE_API_URL` = your Render URL, then deploy.
 4. Back on Render, set `ALLOWED_ORIGINS` to the Vercel URL. Render redeploys by itself.
 
 Free Render services sleep after 15 minutes idle, so the first request then takes about 50 seconds. `DAILY_CHECK_LIMIT` (default 2 on free Gemini) shows visitors a friendly message once the day's free checks are used up.
