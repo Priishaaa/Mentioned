@@ -27,6 +27,20 @@ Open http://localhost:5173.
 | `npm run typecheck` | Type-checks all three packages |
 | `npm run build` then `npm start` | Production: one server on :8787 serves the API and the built frontend |
 
+## Deploy
+
+The frontend goes on Vercel, the API on Render, and saved reports in Upstash Redis. All three have free tiers.
+
+1. **Upstash** (console.upstash.com): create a Redis database and copy its REST URL and token.
+2. **Render** (render.com): New → Blueprint → pick this repo; it reads `render.yaml`. Set:
+   - `GEMINI_API_KEY`
+   - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
+   - `ALLOWED_ORIGINS` (your Vercel URL; fill in after step 3)
+3. **Vercel** (vercel.com): New Project → import this repo, keep the root directory. `vercel.json` sets the build. Add the environment variable `VITE_API_URL` = your Render URL, then deploy.
+4. Back on Render, set `ALLOWED_ORIGINS` to the Vercel URL. Render redeploys by itself.
+
+Free Render services sleep after 15 minutes idle, so the first request then takes about 50 seconds. `DAILY_CHECK_LIMIT` (default 2 on free Gemini) shows visitors a friendly message once the day's free checks are used up.
+
 ## Layout
 
 | Folder | What's in it |
