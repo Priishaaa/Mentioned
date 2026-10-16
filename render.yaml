@@ -1,0 +1,21 @@
+# Render Blueprint for the API (https://render.com/docs/blueprint-spec).
+# Secrets are left blank here ("sync: false"); you fill them in on Render's dashboard.
+services:
+  - type: web
+    name: mentioned-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false

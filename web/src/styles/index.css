@@ -1,0 +1,420 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────
+   Design tokens
+   A printed report: ink on paper, hairline and heavy rules, square corners.
+   The one accent is a highlighter yellow, used only behind the brand's own
+   data (its score, its bars, its name in answers). It is never used for text;
+   text on it is always ink.
+   ────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+  --bg: #f5f3ee;
+  --surface: #fbfaf6;
+  --surface-sunk: #ebe8e1;
+  --ink: #121110;
+  --ink-2: #46443e; /* 9.0:1 on bg */
+  --ink-3: #65625a; /* 5.6:1 on bg */
+  --line: #dbd7cd; /* hairlines */
+  --line-strong: #85827a; /* input borders: 3.6:1 */
+  --rule: #111110; /* heavy section rules */
+  --rival: #c2bfb6;
+  --rival-strong: #77746c;
+  --accent: #ffe14a; /* highlighter */
+  --accent-ink: #111110;
+  --accent-soft: #fff1a6;
+  --mark-band: var(--accent); /* band behind big ink text */
+  --danger: #a3301a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121110;
+    --surface: #1b1a17;
+    --surface-sunk: #25231f;
+    --ink: #efece4;
+    --ink-2: #bebaaf;
+    --ink-3: #969287;
+    --line: #302e2a;
+    --line-strong: #77746c;
+    --rule: #ebe9e3;
+    --rival: #4b4944;
+    --rival-strong: #75726a;
+    --accent: #e9cf3b;
+    --accent-ink: #131312;
+    --accent-soft: rgb(233 207 59 / 0.16);
+    --mark-band: var(--accent);
+    --danger: #ee8a72;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121110;
+  --surface: #1b1a17;
+  --surface-sunk: #25231f;
+  --ink: #efece4;
+  --ink-2: #bebaaf;
+  --ink-3: #969287;
+  --line: #302e2a;
+  --line-strong: #77746c;
+  --rule: #ebe9e3;
+  --rival: #4b4944;
+  --rival-strong: #75726a;
+  --accent: #e9cf3b;
+  --accent-ink: #131312;
+  --accent-soft: rgb(233 207 59 / 0.16);
+  --mark-band: var(--accent);
+  --danger: #ee8a72;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-rule: var(--rule);
+  --color-rival: var(--rival);
+  --color-rival-strong: var(--rival-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+}
+
+@theme {
+  /* 8px grid: every spacing utility is a multiple of 8px (p-1 = 8px, p-0.5 = 4px). */
+  --spacing: 8px;
+
+  --font-display: "Source Serif 4", ui-serif, Georgia, serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Type scale. UI sizes are fixed; display sizes are fluid. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+
+  /* Serif titles inside sections (questions, fixes, quotes) and figures. */
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.35;
+  --text-title-lg: 1.5rem;
+  --text-title-lg--line-height: 1.25;
+  --text-figure: clamp(2.75rem, 2.2rem + 2vw, 3.5rem);
+  --text-figure--line-height: 1;
+  --text-figure-lg: clamp(4rem, 3rem + 4vw, 5.5rem);
+  --text-figure-lg--line-height: 0.85;
+
+  --text-display-sm: clamp(1.5rem, 1.25rem + 1vw, 2rem);
+  --text-display-sm--line-height: 1.15;
+  --text-display-md: clamp(2rem, 1.5rem + 2.2vw, 3.25rem);
+  --text-display-md--line-height: 1.05;
+  --text-display-lg: clamp(2.5rem, 1.6rem + 4vw, 5rem);
+  --text-display-lg--line-height: 1;
+  --text-score: clamp(7rem, 4.5rem + 12vw, 13rem);
+  --text-score--line-height: 0.85;
+
+  --radius-xs: 2px;
+}
+
+/* ── Base ─────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 80px;
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .font-display {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-optical-sizing: auto;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ── Highlighter ──────────────────────────────────────────────── */
+mark {
+  background: none;
+  color: inherit;
+}
+/*
+ * Brand name in answers: a marker stroke behind the text. With data-sweep the
+ * stroke draws itself left to right when "on" (see <Mark>).
+ */
+.hl-brand {
+  color: var(--accent-ink);
+  font-weight: 600;
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-position: 0 50%;
+  background-size: 100% 84%;
+  padding: 0 1px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.hl-rival {
+  text-decoration: underline;
+  text-decoration-color: var(--rival-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+/* Band across the lower part of big ink text (score, wordmark, headline phrase). */
+.mark-under {
+  background-image: linear-gradient(var(--mark-band), var(--mark-band));
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  background-size: 100% 34%;
+  padding: 0 0.04em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.hl-brand[data-sweep],
+.mark-under[data-sweep] {
+  transition: background-size 0.75s cubic-bezier(0.65, 0, 0.35, 1), color 0.2s ease 0.15s;
+}
+.hl-brand[data-sweep="off"] {
+  background-size: 0% 84%;
+  color: inherit;
+}
+.mark-under[data-sweep="off"] {
+  background-size: 0% 34%;
+}
+/*
+ * Dark mode: a lower band of bright yellow under light text is hard to read, so the
+ * stroke covers the whole word and the text turns dark, like the answer highlights.
+ */
+:root[data-theme="dark"] .mark-under {
+  background-position: 0 55%;
+  background-size: 100% 78%;
+  color: var(--accent-ink);
+}
+:root[data-theme="dark"] .mark-under[data-sweep="off"] {
+  background-size: 0% 78%;
+  color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mark-under {
+    background-position: 0 55%;
+    background-size: 100% 78%;
+    color: var(--accent-ink);
+  }
+  :root:not([data-theme="light"]) .mark-under[data-sweep="off"] {
+    background-size: 0% 78%;
+    color: var(--ink);
+  }
+}
+.wordmark .mark-under {
+  transition: background-size 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.wordmark:hover .mark-under {
+  background-size: 100% 100%;
+}
+
+/* Blinking block cursor for streamed text. */
+.caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--ink);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* Ticker of shopper questions. */
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 80s linear infinite;
+}
+.ticker-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.ticker:hover .ticker-track,
+.ticker:focus-within .ticker-track {
+  animation-play-state: paused;
+}
+@keyframes ticker {
+  to { transform: translateX(-50%); }
+}
+
+/* Link underline that draws in on hover. */
+.link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition: background-size 0.25s ease, color 0.15s ease;
+}
+.link-draw:hover,
+.link-draw[aria-current="page"] {
+  background-size: 100% 1px;
+}
+
+/* Hard offset shadow, like a printed sticker. Lifts on hover, presses on click. */
+.lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.lift:hover:not(:disabled) {
+  transform: translate(-3px, -3px);
+  box-shadow: 4px 4px 0 0 var(--lift-shadow, var(--ink));
+}
+.lift:active:not(:disabled) {
+  transform: translate(0, 0);
+  box-shadow: 0 0 0 0 var(--lift-shadow, var(--ink));
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  box-shadow: 8px 8px 0 0 var(--ink);
+}
+@media (max-width: 639px) {
+  .panel {
+    box-shadow: 5px 5px 0 0 var(--ink);
+  }
+}
+a.panel {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+a.panel:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 11px 11px 0 0 var(--ink);
+}
+a.panel:active {
+  transform: translate(4px, 4px);
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+
+/* Big numbers (scores). Light: highlighter band under the digits. Dark: a block
+   behind huge digits looks crude, so the digits themselves turn yellow. */
+.mark-score {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  background-size: 100% 30%;
+  padding: 0 0.04em;
+}
+.mark-score[data-sweep] {
+  transition: background-size 0.75s cubic-bezier(0.65, 0, 0.35, 1), color 0.6s ease;
+}
+.mark-score[data-sweep="off"] {
+  background-size: 0% 30%;
+}
+:root[data-theme="dark"] .mark-score {
+  background-image: none;
+  color: var(--accent);
+}
+:root[data-theme="dark"] .mark-score[data-sweep="off"] {
+  color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mark-score {
+    background-image: none;
+    color: var(--accent);
+  }
+  :root:not([data-theme="light"]) .mark-score[data-sweep="off"] {
+    color: var(--ink);
+  }
+}
+
+/* Bar fill for the brand: highlighter with an ink edge so it holds 3:1 against paper. */
+.bar-brand {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+/* ── Recharts ─────────────────────────────────────────────────── */
+.sov-bar-brand {
+  fill: var(--accent);
+  stroke: var(--ink);
+  stroke-width: 1px;
+}
+.sov-bar-rival {
+  fill: var(--rival);
+}
+.sov-tick,
+.sov-tick-brand {
+  fill: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+.sov-tick-brand {
+  font-weight: 600;
+}
+.sov-cursor {
+  fill: var(--surface-sunk);
+}
+.sov-label {
+  fill: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Skeletons ────────────────────────────────────────────────── */
+.skeleton {
+  background: var(--surface-sunk);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  .ticker-track { animation: none; }
+  .caret { animation: none; }
+  .lift:hover:not(:disabled), a.panel:hover { transform: none; }
+  .hl-brand[data-sweep], .mark-under[data-sweep] { transition: none; }
+  html { scroll-behavior: auto !important; }
+}
+
+/* ── Print (Download as PDF) ──────────────────────────────────── */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+  }
+  @page { margin: 16mm 14mm; }
+  body { background: #fff; }
+  .no-print { display: none !important; }
+  section, article, li, tr { break-inside: avoid; }
+  a { text-decoration: none; }
+  .panel { box-shadow: none; }
+  .hl-brand, .mark-under, .bar-brand {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

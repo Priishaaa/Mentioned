@@ -1,0 +1,13 @@
+node_modules/
+.env
+web/dist/
+server/data/
+# Legacy Python prototype
+.venv/
+__pycache__/
+doesaiknow/
+brands/
+requirements.txt
+queries/
+runs/
+reports/
