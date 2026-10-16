@@ -3,9 +3,21 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Reads a setting, forgiving a common paste mistake on hosting dashboards:
+ * the whole `NAME="value"` line pasted as the value. Keeps just the value.
+ */
+function setting(name: string): string | undefined {
+  let v = process.env[name]?.trim();
+  if (!v) return undefined;
+  if (v.startsWith(`${name}=`)) v = v.slice(name.length + 1).trim();
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1).trim();
+  return v || undefined;
+}
+
 export const hasAnthropic = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 export const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
-export const geminiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
+export const geminiKey = setting("GEMINI_API_KEY") ?? setting("GOOGLE_API_KEY");
 
 /**
  * Which model does the work around the measurement (writing questions, reading
@@ -43,8 +55,8 @@ export const config = {
     .map((s) => s.trim().replace(/\/$/, ""))
     .filter(Boolean),
   /** Upstash Redis (free tier) for saved reports, when files don't survive restarts (e.g. Render free). */
-  redisUrl: process.env.UPSTASH_REDIS_REST_URL,
-  redisToken: process.env.UPSTASH_REDIS_REST_TOKEN,
+  redisUrl: setting("UPSTASH_REDIS_REST_URL"),
+  redisToken: setting("UPSTASH_REDIS_REST_TOKEN"),
   /** Parallel API calls within one check. Kept low on free tiers, which limit requests per minute. */
   concurrency: Number(process.env.CONCURRENCY ?? (analysisProvider === "claude" ? 6 : 2)),
   /** Answers read per analysis call. Batching keeps a check within free-tier limits. */
