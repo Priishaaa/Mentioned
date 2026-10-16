@@ -1,21 +1,18 @@
-import { Reveal } from "./Section";
-
+/** A quiet, collapsed note on how the numbers were made. Open by default when printed. */
 export function Methodology({ questionCount, models }: { questionCount: number; models: string[] }) {
   return (
-    <Reveal className="grid gap-1 border-t border-line pt-2 text-sm text-ink-2 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] md:gap-4">
-      <h2 className="text-sm font-semibold text-ink">How this was measured</h2>
-      <div className="grid gap-1.5">
+    <details className="group mt-6 border-t border-line pt-2 text-sm text-ink-2">
+      <summary className="cursor-pointer list-none text-ink-3 hover:text-ink [&::-webkit-details-marker]:hidden">
+        <span className="underline decoration-line-strong underline-offset-4">How this was measured</span>
+      </summary>
+      <div className="mt-1.5 grid max-w-[72ch] gap-1">
         <p>
-          We wrote {questionCount} questions a real shopper might ask and sent each one to {models.join(", ")} through
-          their APIs. Discovery questions never name your brand, so they show whether AI recommends you unprompted. The
-          score is based mainly on how often you're named in those answers, and how early.
+          {questionCount} shopper questions were sent to {models.join(", ")} through their APIs. Most never name you, so
+          they show whether AI recommends you unprompted. The score is mainly how often, and how early, you're named in
+          those answers.
         </p>
-        <p>
-          API answers can differ from the assistants' own apps, which may search the web or remember the user.
-          AI answers also change over time and between runs, so treat this as a snapshot and check again after you make
-          changes.
-        </p>
+        <p>API answers can differ from the assistants' own apps, and change over time. Treat this as a snapshot.</p>
       </div>
-    </Reveal>
+    </details>
   );
 }

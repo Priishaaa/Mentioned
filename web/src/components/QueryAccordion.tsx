@@ -1,8 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useId, useState, type KeyboardEvent } from "react";
-import { flushSync } from "react-dom";
 import { QUERY_TYPE_LABEL, pad2 } from "../lib/format";
-import { OPEN_QUESTION } from "../lib/events";
+import { usePrinting } from "../lib/usePrinting";
 import { highlightNames } from "../lib/highlight";
 import { EASE_OUT } from "../lib/motion";
 import type { Query, QueryResult, QueryType } from "@mentioned/shared";
@@ -10,26 +9,16 @@ import { ChevronDownIcon, MentionedIcon, MissingIcon } from "./Icons";
 import { Reveal } from "./Section";
 import { TypeBadge } from "./TypeBadge";
 
-type Props = { queries: Query[]; brand: string; competitors: string[] };
+type Props = {
+  queries: Query[];
+  brand: string;
+  competitors: string[];
+  /** Open this question and scroll to it (e.g. after clicking an intent). `n` makes repeats re-trigger. */
+  focus?: { id: number; n: number } | null;
+};
 type Filter = "all" | QueryType;
 
-/** Expands every panel while printing, so the PDF has all the answers. */
-function usePrinting() {
-  const [printing, setPrinting] = useState(false);
-  useEffect(() => {
-    const on = () => flushSync(() => setPrinting(true));
-    const off = () => setPrinting(false);
-    window.addEventListener("beforeprint", on);
-    window.addEventListener("afterprint", off);
-    return () => {
-      window.removeEventListener("beforeprint", on);
-      window.removeEventListener("afterprint", off);
-    };
-  }, []);
-  return printing;
-}
-
-export function QueryAccordion({ queries, brand, competitors }: Props) {
+export function QueryAccordion({ queries, brand, competitors, focus }: Props) {
   const [open, setOpen] = useState<Set<number>>(() => new Set());
   const [filter, setFilter] = useState<Filter>("all");
   const [flashId, setFlashId] = useState<number | null>(null);
@@ -37,22 +26,23 @@ export function QueryAccordion({ queries, brand, competitors }: Props) {
   const baseId = useId();
   const reduce = useReducedMotion();
 
-  // Other sections (e.g. the intent list) can ask for a question to be opened.
+  // Step 1: open the requested question. Step 2 (below): scroll to it once it's rendered.
+  const [scrollTo, setScrollTo] = useState<number | null>(null);
   useEffect(() => {
-    const onOpen = (e: Event) => {
-      const id = (e as CustomEvent<number>).detail;
-      flushSync(() => {
-        setFilter("all");
-        setOpen((prev) => new Set(prev).add(id));
-      });
-      const trigger = document.getElementById(`${baseId}-trigger-${id}`);
-      trigger?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
-      trigger?.focus({ preventScroll: true });
-      setFlashId(id);
-    };
-    window.addEventListener(OPEN_QUESTION, onOpen);
-    return () => window.removeEventListener(OPEN_QUESTION, onOpen);
-  }, [baseId, reduce]);
+    if (!focus) return;
+    setFilter("all");
+    setOpen((prev) => new Set(prev).add(focus.id));
+    setFlashId(focus.id);
+    setScrollTo(focus.id);
+  }, [focus]);
+
+  useEffect(() => {
+    if (scrollTo === null) return;
+    const trigger = document.getElementById(`${baseId}-trigger-${scrollTo}`);
+    trigger?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+    trigger?.focus({ preventScroll: true });
+    setScrollTo(null);
+  }, [scrollTo, open, baseId, reduce]);
 
   useEffect(() => {
     if (flashId === null) return;

@@ -3,18 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BrandForm } from "../components/BrandForm";
 import { Button } from "../components/Button";
-import { Faq } from "../components/Faq";
-import { FinalCta } from "../components/FinalCta";
 import { HowItWorks } from "../components/HowItWorks";
 import { LiveAnswer } from "../components/LiveAnswer";
 import { Mark } from "../components/Mark";
-import { QuestionTicker } from "../components/QuestionTicker";
-import { ReportContents } from "../components/ReportContents";
 import { AlertIcon } from "../components/Icons";
 import { Container, PageTransition } from "../components/Layout";
+import { SampleLinks } from "../components/SampleLinks";
 import { PipelineLoader, type StepState, type StreamedQuestion } from "../components/PipelineLoader";
-import { SampleReportCard } from "../components/SampleReportCard";
-import { WhyItMatters } from "../components/WhyItMatters";
 import { StateMessage } from "../components/StateMessage";
 import { ApiError, QUESTION_COUNT, createReport } from "../lib/api";
 import { listModels, modelCountWords, useModels } from "../lib/models";
@@ -140,59 +135,41 @@ export function Home() {
 
 function Landing({ onSubmit, initial }: { onSubmit: (input: ReportInput) => void; initial?: ReportInput }) {
   const models = useModels();
-  const facts = ["10 shopper questions", capitalise(modelCountWords(models.length)), "About a minute", "Fixes in plain English"];
   return (
-    <div className="grid gap-8 pb-4">
-      {/*
-        Intro, demo, form in that order on phones. On desktop the demo sits in the
-        right column beside the headline and stays in view while you fill in the form.
-      */}
-      <motion.div
+    <div className="grid gap-8 pb-2">
+      {/* One focused screen: the question, the form, and the product answering it. */}
+      <motion.section
         initial="hidden"
         animate="show"
         variants={stagger}
-        className="grid gap-5 pt-5 sm:pt-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-x-6 lg:gap-y-5"
+        className="grid items-center gap-6 pt-4 sm:pt-8 lg:min-h-[calc(100dvh-160px)] lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-8 lg:pt-2"
       >
-        <div className="lg:col-start-1 lg:row-start-1">
-          <motion.h1 variants={rise} className="font-display text-[clamp(2.5rem,1.6rem+3vw,3.75rem)] leading-[1.02] text-ink">
+        <div>
+          <motion.h1 variants={rise} className="font-display text-[clamp(2.5rem,1.6rem+3.4vw,4.25rem)] leading-[1.02] text-ink">
             Is AI recommending <br className="hidden sm:block" />
             <Mark className="mark-under" delay={500}>
               your brand
             </Mark>
             ?
           </motion.h1>
-          <motion.p variants={rise} className="mt-2 max-w-[54ch] text-lg text-ink-2">
-            When shoppers ask {listModels(models, "or")} what to buy, does your name come up? We ask ten real shopper
-            questions and show you the answers.
+          <motion.p variants={rise} className="mt-2 max-w-[42ch] text-lg text-ink-2">
+            See whether {listModels(models)} {models.length === 1 ? "names" : "name"} you when shoppers ask what to buy,
+            and what to fix if not.
           </motion.p>
-          <motion.ul variants={rise} className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm text-ink">
-            {facts.map((fact) => (
-              <li key={fact} className="inline-flex items-center gap-1">
-                <span aria-hidden="true" className="size-1 bg-ink" />
-                {fact}
-              </li>
-            ))}
-          </motion.ul>
+          <motion.div variants={rise} id="check" className="mt-5 scroll-mt-10">
+            <BrandForm onSubmit={onSubmit} initial={initial} />
+          </motion.div>
+          <motion.p variants={rise} className="mt-2 text-xs text-ink-3">
+            Free · about a minute · {modelCountWords(models.length)}
+          </motion.p>
         </div>
-
-        <motion.div variants={rise} className="lg:sticky lg:top-3 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+        <motion.div variants={rise}>
           <LiveAnswer />
         </motion.div>
+      </motion.section>
 
-        <motion.div variants={rise} id="check" className="scroll-mt-10 lg:col-start-1 lg:row-start-2">
-          <BrandForm onSubmit={onSubmit} initial={initial} />
-        </motion.div>
-      </motion.div>
-
-      <QuestionTicker />
-      <WhyItMatters />
       <HowItWorks />
-      <ReportContents />
-      <SampleReportCard />
-      <Faq />
-      <FinalCta />
+      <SampleLinks />
     </div>
   );
 }
-
-const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

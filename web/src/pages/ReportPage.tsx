@@ -1,31 +1,25 @@
 import { motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation, useParams } from "react-router-dom";
+import { DEMO_REPORT_ID } from "@mentioned/shared/fixtures";
+import type { Report } from "@mentioned/shared";
 import { Button, ButtonLink } from "../components/Button";
 import { Descriptors } from "../components/Descriptors";
 import { FixCard } from "../components/FixCard";
-import { AlertIcon, SearchOffIcon, SentimentIcon } from "../components/Icons";
+import { AlertIcon, SearchOffIcon } from "../components/Icons";
 import { IntentGrid } from "../components/IntentGrid";
-import { KeyTakeaways } from "../components/KeyTakeaways";
 import { Container, PageTransition } from "../components/Layout";
 import { Methodology } from "../components/Methodology";
 import { ModelBars } from "../components/ModelBars";
 import { QueryAccordion } from "../components/QueryAccordion";
-import { ReportActions } from "../components/ReportActions";
-import { ReportNav } from "../components/ReportNav";
+import { ReportHero } from "../components/ReportHero";
 import { ReportSkeleton } from "../components/ReportSkeleton";
-import { ScoreHero } from "../components/ScoreHero";
-import { Section } from "../components/Section";
 import { ShareOfVoice, shareOfVoiceSummary } from "../components/ShareOfVoice";
-import { StatCard } from "../components/StatCard";
 import { StateMessage } from "../components/StateMessage";
-import { CountUp } from "../components/CountUp";
 import { ReportNotFoundError, getReport } from "../lib/api";
-import { ordinal } from "../lib/format";
-import { useDoneFixes } from "../lib/useDoneFixes";
 import { EASE_OUT } from "../lib/motion";
-import { DEMO_REPORT_ID } from "@mentioned/shared/fixtures";
-import type { Report } from "@mentioned/shared";
+import { usePrinting } from "../lib/usePrinting";
+import { useDoneFixes } from "../lib/useDoneFixes";
 
 type LoadState =
   | { status: "loading" }
@@ -82,7 +76,7 @@ export function ReportPage() {
               </>
             }
           >
-            The link may be mistyped, or the report may have been removed. Reports are kept for 90 days.
+            The link may be mistyped, or the report may have been removed.
           </StateMessage>
         )}
 
@@ -100,7 +94,7 @@ export function ReportPage() {
               </>
             }
           >
-            <p>Your results are safe; we just couldn't fetch them this time. Check your connection and try again.</p>
+            <p>We couldn't fetch it this time. Check your connection and try again.</p>
             <p className="mt-1 text-sm text-ink-3">Details: {state.message}</p>
           </StateMessage>
         )}
@@ -113,161 +107,184 @@ export function ReportPage() {
 
 function SampleBanner({ brand }: { brand: string }) {
   return (
-    <motion.div
+    <motion.p
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: EASE_OUT }}
-      className="no-print mt-3 border-l-4 border-accent bg-surface py-1 pl-2 pr-1 text-sm text-ink-2"
+      className="no-print mt-2 border-l-4 border-accent bg-surface py-1 pl-2 pr-1 text-sm text-ink-2"
       role="note"
     >
-      <span className="font-medium text-ink">Demo mode: this is sample data.</span> Real checks for {brand} run once the
-      server has a Gemini API key (free).
-    </motion.div>
+      <span className="font-medium text-ink">Demo data.</span> Real checks for {brand} run once the server has a Gemini
+      API key.
+    </motion.p>
   );
 }
 
-const SECTION_META: Record<string, { id: string; label: string }> = {
-  breakdown: { id: "breakdown", label: "Breakdown" },
-  models: { id: "models", label: "Models" },
-  voice: { id: "share-of-voice", label: "Competitors" },
-  intents: { id: "intents", label: "Intents" },
-  queries: { id: "questions", label: "Questions" },
-  descriptors: { id: "descriptions", label: "Descriptions" },
-  fixes: { id: "fixes", label: "Fixes" },
+type TabId = "overview" | "competitors" | "answers" | "fixes";
+const TAB_IDS: TabId[] = ["overview", "competitors", "answers", "fixes"];
+const tabFromHash = (): TabId | null => {
+  const h = window.location.hash.slice(1) as TabId;
+  return TAB_IDS.includes(h) ? h : null;
 };
-
-const ORDER_DEFAULT = ["breakdown", "models", "voice", "intents", "queries", "descriptors", "fixes"];
-// A score of 0 leads with who AI recommends instead and what to do about it.
-const ORDER_ZERO = ["voice", "fixes", "breakdown", "intents", "models", "queries", "descriptors"];
 
 function ReportBody({ report, sampleFor }: { report: Report; sampleFor?: string }) {
   const discovery = report.queries.filter((q) => q.type === "discovery");
   const discoveryAnswers = discovery.reduce((n, q) => n + q.results.length, 0);
   const competitors = report.shareOfVoice.filter((s) => !s.isBrand).map((s) => s.name);
-  const modelNames = report.models.map((m) => m.name);
   const isZero = report.score === 0;
-  const { stats } = report;
-  const mentionCount = Math.round(stats.mentionRate * discoveryAnswers);
-  const heroRef = useRef<HTMLDivElement>(null);
   const { done, toggle } = useDoneFixes(report.id);
+  const printing = usePrinting();
+  const baseId = useId();
+
+  // A score of 0 opens on who's recommended instead; otherwise on the overview.
+  const [tab, setTab] = useState<TabId>(() => tabFromHash() ?? (isZero ? "competitors" : "overview"));
+  const [focus, setFocus] = useState<{ id: number; n: number } | null>(null);
+
+  const choose = (t: TabId) => {
+    setTab(t);
+    history.replaceState(null, "", `#${t}`);
+  };
+  const openQuestion = (id: number) => {
+    choose("answers");
+    setFocus((f) => ({ id, n: (f?.n ?? 0) + 1 }));
+  };
+
   // Link each intent to its discovery question so the intent list can jump to it.
   const intents = report.intents.map((intent) => ({
     ...intent,
     queryId: discovery.find((q) => q.intent === intent.label)?.id,
   }));
 
-  const sections: Record<string, () => ReactNode> = {
-    breakdown: () => (
-      <Section id="breakdown" title="Score breakdown" description="The three numbers behind your score.">
-        <div className="grid border-y border-line md:grid-cols-3 md:divide-x md:divide-line max-md:divide-y max-md:divide-line">
-          <StatCard
-            label="Mention rate"
-            value={<CountUp value={Math.round(stats.mentionRate * 100)} suffix="%" />}
-            caption={`Named in ${mentionCount} of ${discoveryAnswers} answers to questions that don't name you.`}
-          />
-          <StatCard
-            label="Average position"
-            value={stats.avgPosition === null ? <span className="text-ink-3">n/a</span> : <CountUp value={stats.avgPosition} decimals={1} />}
-            caption={
-              stats.avgPosition === null
-                ? "Not ranked: no model recommended you."
-                : `Usually named ${ordinal(Math.round(stats.avgPosition))} when you're named at all. Lower is better.`
-            }
-          />
-          <StatCard
-            label="Sentiment"
-            icon={<SentimentIcon sentiment={stats.sentiment} />}
-            value={<span className="capitalize">{stats.sentiment}</span>}
-            caption={
-              isZero
-                ? "Neutral by default: AI has nothing to say about you yet."
-                : "Overall tone of what AI says when it describes you."
-            }
-          />
+  const tabs: { id: TabId; label: string; count?: number; content: ReactNode }[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      content: (
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+          <Panel title="By AI model" hint="Click a model to see which questions">
+            <ModelBars models={report.models} discovery={discovery} />
+          </Panel>
+          <Panel title="By shopper intent" hint="Click one to read its answers">
+            <IntentGrid intents={intents} onOpenQuestion={openQuestion} />
+          </Panel>
         </div>
-      </Section>
-    ),
-    models: () => (
-      <Section
-        id="models"
-        title="By AI model"
-        description="How often each assistant named you when shoppers asked without mentioning you. Click a model to see which questions."
-      >
-        <ModelBars models={report.models} discovery={discovery} />
-      </Section>
-    ),
-    voice: () => (
-      <Section
-        id="share-of-voice"
-        title={isZero ? "Who AI recommends instead" : "Share of voice"}
-        description={shareOfVoiceSummary(report.shareOfVoice, discoveryAnswers)}
-      >
-        <ShareOfVoice data={report.shareOfVoice} totalAnswers={discoveryAnswers} discovery={discovery} />
-      </Section>
-    ),
-    intents: () => (
-      <Section
-        id="intents"
-        title="Visibility by intent"
-        description="Each discovery question tests a different reason to buy. This is where you show up, and where you don't. Click one to read the answers."
-      >
-        <IntentGrid intents={intents} />
-      </Section>
-    ),
-    queries: () => (
-      <Section
-        id="questions"
-        title="Question by question"
-        description="Every question we asked, and what each AI model said. Open one to read the answers."
-      >
-        <QueryAccordion queries={report.queries} brand={report.brand} competitors={competitors} />
-      </Section>
-    ),
-    descriptors: () => (
-      <Section id="descriptions" title="How AI describes you" description="Phrases taken from the answers.">
-        <Descriptors items={report.descriptors} brand={report.brand} />
-      </Section>
-    ),
-    fixes: () => (
-      <Section
-        id="fixes"
-        title={isZero ? "Where to start" : "Top 3 fixes"}
-        description={
-          done.size > 0
-            ? `Ranked by how much each one should move your score. ${done.size} of ${report.fixes.length} done.`
-            : "Ranked by how much each one should move your score. Tick them off as you go."
-        }
-      >
-        <ol className="border-t border-ink">
-          {report.fixes.map((fix, i) => (
-            <FixCard key={fix.title} fix={fix} index={i} done={done.has(i)} onToggle={() => toggle(i)} />
-          ))}
-        </ol>
-      </Section>
-    ),
+      ),
+    },
+    {
+      id: "competitors",
+      label: "Competitors",
+      content: (
+        <div className="grid gap-6">
+          <Panel title={isZero ? "Who AI recommends instead" : "Share of voice"} hint={shareOfVoiceSummary(report.shareOfVoice, discoveryAnswers)}>
+            <ShareOfVoice data={report.shareOfVoice} totalAnswers={discoveryAnswers} discovery={discovery} />
+          </Panel>
+          <Panel title="How AI describes you">
+            <Descriptors items={report.descriptors} brand={report.brand} />
+          </Panel>
+        </div>
+      ),
+    },
+    {
+      id: "answers",
+      label: "Answers",
+      count: report.queries.length,
+      content: <QueryAccordion queries={report.queries} brand={report.brand} competitors={competitors} focus={focus} />,
+    },
+    {
+      id: "fixes",
+      label: "Fixes",
+      count: report.fixes.length,
+      content: (
+        <Panel title={isZero ? "Where to start" : "What to fix first"} hint={done.size ? `${done.size} of ${report.fixes.length} done` : "Tick them off as you go"}>
+          <ol className="border-t border-line">
+            {report.fixes.map((fix, i) => (
+              <FixCard key={fix.title} fix={fix} index={i} done={done.has(i)} onToggle={() => toggle(i)} />
+            ))}
+          </ol>
+        </Panel>
+      ),
+    },
+  ];
+
+  // Arrow keys move between tabs (WAI-ARIA tabs pattern).
+  const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const i = TAB_IDS.indexOf(tab);
+    const next = e.key === "ArrowRight" ? (i + 1) % 4 : e.key === "ArrowLeft" ? (i + 3) % 4 : e.key === "Home" ? 0 : e.key === "End" ? 3 : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    choose(TAB_IDS[next]);
+    document.getElementById(`${baseId}-tab-${TAB_IDS[next]}`)?.focus();
   };
-
-  const order = isZero ? ORDER_ZERO : ORDER_DEFAULT;
-
-  const navSections = useMemo(() => order.map((key) => SECTION_META[key]), [order]);
 
   return (
     <article>
-      <ReportNav brand={report.brand} score={report.score} sections={navSections} heroRef={heroRef} />
       {sampleFor && <SampleBanner brand={sampleFor} />}
-      <div ref={heroRef}>
-        <ScoreHero report={report} modelCount={report.models.length} />
+      <ReportHero report={report} />
+
+      <div
+        role="tablist"
+        aria-label="Report sections"
+        onKeyDown={onTabKey}
+        className="no-print sticky top-0 z-30 -mx-2 flex gap-2 overflow-x-auto border-b border-line bg-bg px-2 [scrollbar-width:none] sm:-mx-4 sm:gap-3 sm:px-4"
+      >
+        {tabs.map((t) => {
+          const selected = t.id === tab;
+          return (
+            <button
+              key={t.id}
+              id={`${baseId}-tab-${t.id}`}
+              role="tab"
+              type="button"
+              aria-selected={selected}
+              aria-controls={`${baseId}-panel-${t.id}`}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => choose(t.id)}
+              className={`relative shrink-0 py-2 text-sm transition-colors ${selected ? "font-semibold text-ink" : "text-ink-2 hover:text-ink"}`}
+            >
+              {t.label}
+              {t.count !== undefined && <span className="tabular ml-0.5 text-ink-3">{t.count}</span>}
+              {selected && (
+                <motion.span layoutId={`${baseId}-tab-line`} className="absolute inset-x-0 -bottom-px h-[2px] bg-ink" transition={{ duration: 0.3, ease: EASE_OUT }} />
+              )}
+            </button>
+          );
+        })}
       </div>
-      <KeyTakeaways report={report} />
-      <div className="grid gap-8">
-        {order.map((key) => (
-          <div key={key}>{sections[key]()}</div>
-        ))}
-        <div className="grid gap-5">
-          <ReportActions />
-          <Methodology questionCount={report.queries.length} models={modelNames} />
-        </div>
-      </div>
+
+      {/* Printing (Download as PDF) shows every tab, one after another. */}
+      {tabs.map((t) =>
+        printing || t.id === tab ? (
+          <motion.section
+            key={t.id}
+            id={`${baseId}-panel-${t.id}`}
+            role="tabpanel"
+            aria-labelledby={`${baseId}-tab-${t.id}`}
+            tabIndex={0}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: EASE_OUT }}
+            className="pt-4 focus:outline-none"
+          >
+            {printing && <h2 className="mb-2 font-display text-display-sm text-ink">{t.label}</h2>}
+            {t.content}
+          </motion.section>
+        ) : null,
+      )}
+
+      <Methodology questionCount={report.queries.length} models={report.models.map((m) => m.name)} />
     </article>
+  );
+}
+
+/** A titled block inside a tab: a small heading and an optional one-line hint. */
+function Panel({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+        <h2 className="font-display text-title-lg text-ink">{title}</h2>
+        {hint && <p className="text-sm text-ink-3">{hint}</p>}
+      </div>
+      {children}
+    </div>
   );
 }

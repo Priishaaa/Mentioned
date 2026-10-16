@@ -16,20 +16,9 @@ Run it from the repo root with `npm run dev`. That starts this app on :5173 and 
 
 ## Page structure
 
-- **Landing (`/`):**
-  1. Hero with the form and the live demo
-  2. Question ticker
-  3. Why it matters
-  4. How it works
-  5. What's in your report
-  6. Sample report
-  7. FAQ
-  8. Closing call to action
-
-  The header links use `/#section` URLs; `App.tsx` scrolls to the section after the page mounts, and `/#check` also focuses the brand field.
-- **Report (`/report/:id`):** score hero, then an "At a glance" summary, then the report sections. A sticky bar with a reading-progress line and section links appears after the hero.
-- **Link previews:** `public/og.png` is the share image (1200×630). Once deployed, make the `og:image` meta tag in `index.html` an absolute URL.
-- **Not included yet:** customer logos, testimonials and usage numbers. Add them when there's real data to show.
+- **Landing (`/`):** one focused screen with the headline, the form (brand and category; website, country and competitors behind "Add details") and the live demo. Below it, a three-step strip and two example reports.
+- **Report (`/report/:id`):** the answer first: brand, verdict, score, and four figures (mention rate, usual position, tone, named most), with Share / PDF / New check. Details sit in tabs (Overview, Competitors, Answers, Fixes). The tab is kept in the URL (`#answers`) and the tab bar sticks while scrolling. Printing shows every tab. A score of 0 opens on Competitors.
+- **Link previews:** `public/og.png` is the share image. Once deployed, make the `og:image` meta tag in `index.html` an absolute URL.
 
 ## Talking to the backend
 

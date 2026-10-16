@@ -1,4 +1,3 @@
-import { openQuestion } from "../lib/events";
 import type { IntentStatus, Report } from "@mentioned/shared";
 import { ArrowRightIcon, MentionedIcon, MissingIcon, PartialIcon } from "./Icons";
 import { Reveal } from "./Section";
@@ -15,7 +14,7 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 type Intent = Report["intents"][number] & { queryId?: number };
 
 /** Shopper intents as a ruled checklist: mark + label + status in words. Click one to jump to its question. */
-export function IntentGrid({ intents }: { intents: Intent[] }) {
+export function IntentGrid({ intents, onOpenQuestion }: { intents: Intent[]; onOpenQuestion: (id: number) => void }) {
   const sorted = [...intents].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
   return (
     <div>
@@ -31,7 +30,7 @@ export function IntentGrid({ intents }: { intents: Intent[] }) {
           );
         })}
       </Reveal>
-      <ul className="grid border-t border-line sm:grid-cols-2 sm:gap-x-4">
+      <ul className="grid border-t border-line">
         {sorted.map((intent) => {
           const { Icon, label } = STATUS[intent.status];
           return (
@@ -39,7 +38,7 @@ export function IntentGrid({ intents }: { intents: Intent[] }) {
               <button
                 type="button"
                 disabled={intent.queryId === undefined}
-                onClick={() => intent.queryId !== undefined && openQuestion(intent.queryId)}
+                onClick={() => intent.queryId !== undefined && onOpenQuestion(intent.queryId)}
                 className="group flex w-full items-center gap-1.5 py-1.5 text-left transition-colors hover:bg-surface disabled:hover:bg-transparent"
               >
                 <Icon className="shrink-0 text-[20px] transition-transform duration-200 group-hover:scale-110" />

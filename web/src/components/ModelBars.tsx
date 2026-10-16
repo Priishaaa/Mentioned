@@ -28,7 +28,7 @@ export function ModelBars({ models, discovery }: Props) {
               aria-expanded={isOpen}
               aria-controls={panelId}
               onClick={() => setOpen(isOpen ? null : m.name)}
-              className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 py-2 text-left transition-colors hover:bg-surface sm:grid-cols-[160px_minmax(0,1fr)_200px]"
+              className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 py-2 text-left transition-colors hover:bg-surface sm:grid-cols-[112px_minmax(0,1fr)_128px]"
             >
               <span className="flex items-center gap-0.5 text-base font-semibold text-ink">
                 {m.name}
@@ -68,7 +68,7 @@ export function ModelBars({ models, discovery }: Props) {
                   transition={{ duration: 0.3, ease: EASE_OUT }}
                   className="overflow-hidden"
                 >
-                  <ol className="grid gap-x-3 pb-2 sm:grid-cols-2 sm:pl-[160px] md:grid-cols-3">
+                  <ol className="grid gap-x-3 pb-2 sm:grid-cols-2 sm:pl-[112px]">
                     {results.map(({ q, r }, n) => (
                       <motion.li
                         key={q.id}

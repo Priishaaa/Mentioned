@@ -1,9 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useId, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { highlightNames } from "../lib/highlight";
 import { EASE_OUT } from "../lib/motion";
-import { DEMO_REPORT_ID } from "@mentioned/shared/fixtures";
 import { EXAMPLES as examples } from "../content/examples";
 import { MentionedIcon, MissingIcon } from "./Icons";
 
@@ -58,7 +56,11 @@ export function LiveAnswer() {
   });
 
   function nextQuestion() {
-    setQi((n) => (n + 1) % examples.length);
+    goTo((qi + 1) % examples.length);
+  }
+
+  function goTo(i: number) {
+    setQi(i);
     setMi(0);
     setTyped(0);
     setStreamed(0);
@@ -76,31 +78,49 @@ export function LiveAnswer() {
 
   return (
     <section aria-label="Example: how AI models answer a shopper" className="panel p-2 sm:p-3">
+      {/* Category, and dots to switch example (plus pause: it moves on by itself). */}
       <div className="flex items-center justify-between gap-1">
-        <p className="text-sm font-semibold text-ink">A shopper asks</p>
-        <div className="no-print flex items-center gap-1.5 text-xs">
-          <button type="button" onClick={() => setPlaying((p) => !p)} className="text-ink-2 underline underline-offset-4 hover:text-ink">
-            {playing ? "Pause" : "Play"}
-          </button>
-          <button type="button" onClick={nextQuestion} className="text-ink-2 underline underline-offset-4 hover:text-ink">
-            Next question
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.p
+            key={q.category}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="text-xs font-medium text-ink-2"
+          >
+            {q.category}
+          </motion.p>
+        </AnimatePresence>
+        <div className="no-print flex items-center gap-1">
+          {examples.map((ex, i) => (
+            <button
+              key={ex.category}
+              type="button"
+              onClick={() => {
+                setPlaying(false);
+                goTo(i);
+              }}
+              aria-label={`Show the ${ex.category} example`}
+              aria-current={i === qi ? "true" : undefined}
+              className="grid size-2.5 place-items-center"
+            >
+              <span className={`block h-0.5 transition-all duration-300 ${i === qi ? "w-2 bg-ink" : "w-0.5 bg-line-strong hover:bg-ink-3"}`} />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPlaying((p) => !p)}
+            aria-label={playing ? "Pause examples" : "Play examples"}
+            className="ml-0.5 grid size-2.5 place-items-center text-ink-3 hover:text-ink"
+          >
+            <svg viewBox="0 0 12 12" className="size-1.5" fill="currentColor" aria-hidden="true">
+              {playing ? <path d="M2 1h3v10H2zM7 1h3v10H7z" /> : <path d="M2 1l9 5-9 5z" />}
+            </svg>
           </button>
         </div>
       </div>
-
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.p
-          key={q.category}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-          className="mt-1.5 text-xs text-ink-3"
-        >
-          {q.category} · brand: <span className="font-medium text-ink-2">{q.brand}</span>
-        </motion.p>
-      </AnimatePresence>
-      <p className="mt-0.5 min-h-[3.4em] font-display text-title-lg font-normal text-ink">
+      <p className="mt-1 min-h-[3.4em] font-display text-title-lg font-normal text-ink">
         <span aria-hidden="true">
           “{shownQuestion}
           {questionDone ? "”" : <span className="caret" />}
@@ -158,19 +178,10 @@ export function LiveAnswer() {
               </motion.p>
             )}
           </AnimatePresence>
-          <span className="tabular text-xs text-ink-3">
-            {qi + 1}/{examples.length}
-          </span>
+          <span className="text-xs text-ink-3">Example · made-up brands</span>
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-ink-3">
-        Illustrative answers with made-up brands. See a{" "}
-        <Link to={`/report/${DEMO_REPORT_ID}`} className="text-ink-2 underline underline-offset-2 hover:text-ink">
-          full sample report
-        </Link>
-        .
-      </p>
     </section>
   );
 }

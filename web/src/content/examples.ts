@@ -130,19 +130,3 @@ export const EXAMPLES: Example[] = [
     answers: creaseBudget.results.map((r) => ({ model: r.model, position: r.mentioned ? r.position : null, excerpt: r.excerpt })),
   },
 ];
-
-/** For the ticker: the kind of thing shoppers type, across many categories. */
-export const TICKER_QUESTIONS = [
-  "good vitamin c serum for oily skin under 1000?",
-  "which indian coffee is good for a beginner with a french press",
-  "running shoes for flat feet under 5000",
-  "where to buy handmade cotton rugs online that dont shed",
-  "best wireless earbuds under 2000 with good mic",
-  "ayurvedic hair oil that actually works for hair fall?",
-  "gift for 12 yr old nephew who's mad about cricket, budget 3000",
-  "cotton kurta brands that dont shrink after one wash",
-  "masala chai brand that tastes like tapri chai",
-  "best wooden toys brand in india for toddlers",
-  "sunscreen that doesnt leave a white cast on brown skin",
-  "is it worth buying a cast iron pan from an indian brand",
-];

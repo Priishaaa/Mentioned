@@ -1,205 +1,153 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
+import { MAX_COMPETITORS, type ReportInput } from "@mentioned/shared";
 import { EASE_OUT } from "../lib/motion";
-import type { ReportInput } from "@mentioned/shared";
-import { Button } from "./Button";
-import { AlertIcon, ArrowRightIcon, ChevronDownIcon } from "./Icons";
+import { ArrowRightIcon, ChevronDownIcon } from "./Icons";
 import { ChipInput } from "./ChipInput";
 
 const COUNTRIES = ["India", "United States", "United Kingdom", "United Arab Emirates", "Singapore", "Australia", "Canada"];
-const MAX_COMPETITORS = 3;
 const URL_RE = /^(https?:\/\/)?([\w-]+\.)+[a-z]{2,}(\/\S*)?$/i;
 
-type Field = "brand" | "website" | "category";
+const field =
+  "h-6 w-full border border-line-strong bg-surface px-1.5 text-base text-ink placeholder:text-ink-3 " +
+  "transition-[border-color,box-shadow] duration-150 hover:border-ink focus:border-ink focus:shadow-[3px_3px_0_0_var(--ink)] focus:outline-none";
 
-function validate(input: ReportInput): Partial<Record<Field, string>> {
-  const errors: Partial<Record<Field, string>> = {};
-  if (!input.brand.trim()) errors.brand = "Enter your brand name.";
-  if (!input.category.trim()) errors.category = "Add a category, like “skincare” or “running shoes”.";
-  if (input.website.trim() && !URL_RE.test(input.website.trim())) errors.website = "That doesn't look like a web address.";
-  return errors;
-}
-
-const inputClass =
-  "h-6 w-full rounded-xs border bg-surface px-1.5 text-base text-ink transition-colors placeholder:text-ink-3 " +
-  "transition-[border-color,box-shadow,transform] duration-150 hover:border-ink focus:-translate-x-0.5 focus:-translate-y-0.5 focus:border-ink " +
-  "focus:shadow-[4px_4px_0_0_var(--ink)] focus:outline-none";
-
-function FieldShell({
-  id,
-  label,
-  optional,
-  hint,
-  error,
-  children,
-  className = "",
-}: {
-  id: string;
-  label: string;
-  optional?: boolean;
-  hint?: string;
-  error?: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <div className="mb-0.5 flex items-baseline justify-between gap-1">
-        <label htmlFor={id} className="text-sm font-semibold text-ink">
-          {label}
-        </label>
-        {optional && <span className="text-xs text-ink-3">Optional</span>}
-      </div>
-      {children}
-      <div className="min-h-3 pt-0.5 text-sm">
-        <AnimatePresence mode="wait" initial={false}>
-          {error ? (
-            <motion.p
-              key="error"
-              id={`${id}-error`}
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: EASE_OUT }}
-              className="flex items-center gap-0.5 text-danger"
-            >
-              <AlertIcon className="shrink-0" /> {error}
-            </motion.p>
-          ) : hint ? (
-            <motion.p key="hint" id={`${id}-hint`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-ink-3">
-              {hint}
-            </motion.p>
-          ) : null}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-
+/**
+ * The one thing the landing page asks for. Brand and category are enough to run
+ * a check; website, country and competitors are optional and tucked away.
+ */
 export function BrandForm({ onSubmit, initial }: { onSubmit: (input: ReportInput) => void; initial?: ReportInput }) {
-  const [input, setInput] = useState<ReportInput>(
-    initial ?? { brand: "", website: "", category: "", country: "India", competitors: [] },
-  );
-  const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
-  const errors = validate(input);
-  const canSubmit = Object.keys(errors).length === 0;
+  const [input, setInput] = useState<ReportInput>(initial ?? { brand: "", website: "", category: "", country: "India", competitors: [] });
+  const [more, setMore] = useState(Boolean(initial?.website || initial?.competitors.length));
+  const [tried, setTried] = useState(false);
 
   const set = <K extends keyof ReportInput>(key: K, value: ReportInput[K]) => setInput((p) => ({ ...p, [key]: value }));
-  const blur = (f: Field) => () => setTouched((t) => ({ ...t, [f]: true }));
-  const shown = (f: Field) => (touched[f] ? errors[f] : undefined);
-  const describe = (f: Field, hasHint = false) => (shown(f) ? `${f}-error` : hasHint ? `${f}-hint` : undefined);
+  const websiteBad = Boolean(input.website.trim()) && !URL_RE.test(input.website.trim());
+  const missing = !input.brand.trim() ? "brand" : !input.category.trim() ? "category" : null;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) {
-      setTouched({ brand: true, website: true, category: true });
+    setTried(true);
+    if (missing || websiteBad) {
+      document.getElementById(missing ?? "website")?.focus();
+      if (websiteBad) setMore(true);
       return;
     }
-    onSubmit({
-      ...input,
-      brand: input.brand.trim(),
-      website: input.website.trim(),
-      category: input.category.trim(),
-    });
+    onSubmit({ ...input, brand: input.brand.trim(), website: input.website.trim(), category: input.category.trim() });
   };
 
   return (
-    <form onSubmit={submit} noValidate className="border-t-2 border-rule pt-2">
-      <div className="grid gap-x-2 gap-y-1.5 sm:grid-cols-2">
-        <FieldShell id="brand" label="Brand name" error={shown("brand")}>
+    <form onSubmit={submit} noValidate aria-describedby="form-status">
+      <div className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <label className="grid gap-0.5">
+          <span className="text-xs font-medium text-ink-2">Brand</span>
           <input
             id="brand"
             value={input.brand}
             onChange={(e) => set("brand", e.target.value)}
-            onBlur={blur("brand")}
             placeholder="e.g. Lumen & Leaf"
             autoComplete="organization"
             required
-            aria-invalid={shown("brand") ? true : undefined}
-            aria-describedby={describe("brand")}
-            className={`${inputClass} ${shown("brand") ? "border-danger" : "border-line-strong"}`}
+            aria-invalid={tried && missing === "brand" ? true : undefined}
+            className={field}
           />
-        </FieldShell>
-
-        <FieldShell id="website" label="Website" optional hint="Helps us tell you apart from brands with similar names." error={shown("website")}>
-          <input
-            id="website"
-            type="url"
-            inputMode="url"
-            value={input.website}
-            onChange={(e) => set("website", e.target.value)}
-            onBlur={blur("website")}
-            placeholder="e.g. lumenandleaf.in"
-            autoComplete="url"
-            aria-invalid={shown("website") ? true : undefined}
-            aria-describedby={describe("website", true)}
-            className={`${inputClass} ${shown("website") ? "border-danger" : "border-line-strong"}`}
-          />
-        </FieldShell>
-
-        <FieldShell id="category" label="Category" hint="What a shopper would search for." error={shown("category")}>
+        </label>
+        <label className="grid gap-0.5">
+          <span className="text-xs font-medium text-ink-2">Category</span>
           <input
             id="category"
             value={input.category}
             onChange={(e) => set("category", e.target.value)}
-            onBlur={blur("category")}
-            placeholder="e.g. skincare, running shoes"
+            placeholder="e.g. skincare"
             required
-            aria-invalid={shown("category") ? true : undefined}
-            aria-describedby={describe("category", true)}
-            className={`${inputClass} ${shown("category") ? "border-danger" : "border-line-strong"}`}
+            aria-invalid={tried && missing === "category" ? true : undefined}
+            className={field}
           />
-        </FieldShell>
-
-        <FieldShell id="country" label="Country" hint="Where your shoppers are.">
-          <div className="relative">
-            <select
-              id="country"
-              value={input.country}
-              onChange={(e) => set("country", e.target.value)}
-              aria-describedby="country-hint"
-              className={`${inputClass} cursor-pointer appearance-none border-line-strong pr-5`}
-            >
-              {COUNTRIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-            <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-ink-3" />
-          </div>
-        </FieldShell>
-
-        <div className="sm:col-span-2">
-          <div className="mb-0.5 flex items-baseline justify-between gap-1">
-            <label htmlFor="competitors" className="text-sm font-semibold text-ink">
-              Competitors
-            </label>
-            <span className="text-xs text-ink-3">
-              Optional · <span className="tabular">{input.competitors.length}</span>/{MAX_COMPETITORS}
-            </span>
-          </div>
-          <ChipInput
-            id="competitors"
-            values={input.competitors}
-            onChange={(v) => set("competitors", v)}
-            max={MAX_COMPETITORS}
-            reserved={[input.brand]}
-            describedBy="competitors-hint"
-          />
-          <p id="competitors-hint" className="sr-only">
-            Press Enter or comma to add a competitor. Up to {MAX_COMPETITORS}.
-          </p>
-        </div>
+        </label>
+        <button
+          type="submit"
+          className="lift group mt-1 inline-flex h-6 items-center justify-center gap-1 self-end border border-ink bg-ink px-3 text-base font-medium text-bg [--lift-shadow:var(--accent)] sm:mt-0"
+        >
+          Check
+          <ArrowRightIcon className="transition-transform duration-200 group-hover:translate-x-0.5" />
+        </button>
       </div>
 
-      <div className="mt-1 flex flex-col-reverse gap-1.5 sm:flex-row sm:items-center sm:justify-between">
-        <p id="submit-hint" className="text-sm text-ink-3">
-          {canSubmit ? "Takes about a minute." : "Add your brand name and category to continue."}
+      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1">
+        <button
+          type="button"
+          aria-expanded={more}
+          aria-controls="more-details"
+          onClick={() => setMore((m) => !m)}
+          className="inline-flex items-center gap-0.5 text-sm text-ink-2 hover:text-ink"
+        >
+          <ChevronDownIcon className={`text-[16px] transition-transform duration-200 ${more ? "rotate-180" : ""}`} />
+          {more ? "Fewer details" : "Add website, country or competitors"}
+        </button>
+        <p id="form-status" aria-live="polite" className="text-sm text-danger">
+          {tried && missing === "brand" && "Enter your brand name."}
+          {tried && missing === "category" && "Add what you sell, e.g. “skincare”."}
+          {tried && !missing && websiteBad && "That website doesn't look right."}
         </p>
-        <Button type="submit" disabled={!canSubmit} aria-describedby="submit-hint" className="group h-6 px-3 text-base">
-          Check my brand
-          <ArrowRightIcon className="transition-transform duration-300 group-enabled:group-hover:translate-x-0.5" />
-        </Button>
       </div>
+
+      <AnimatePresence initial={false}>
+        {more && (
+          <motion.div
+            id="more-details"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: EASE_OUT }}
+            className="overflow-hidden"
+          >
+            <div className="grid gap-1 pt-2 sm:grid-cols-2">
+              <label className="grid gap-0.5">
+                <span className="text-xs font-medium text-ink-2">Website</span>
+                <input
+                  id="website"
+                  type="url"
+                  inputMode="url"
+                  value={input.website}
+                  onChange={(e) => set("website", e.target.value)}
+                  placeholder="lumenandleaf.in"
+                  autoComplete="url"
+                  aria-invalid={websiteBad ? true : undefined}
+                  className={field}
+                />
+              </label>
+              <label className="grid gap-0.5">
+                <span className="text-xs font-medium text-ink-2">Country</span>
+                <span className="relative">
+                  <select
+                    id="country"
+                    value={input.country}
+                    onChange={(e) => set("country", e.target.value)}
+                    className={`${field} cursor-pointer appearance-none pr-4`}
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDownIcon className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[16px] text-ink-3" />
+                </span>
+              </label>
+              <div className="grid gap-0.5 sm:col-span-2">
+                <label htmlFor="competitors" className="text-xs font-medium text-ink-2">
+                  Competitors <span className="text-ink-3">· up to {MAX_COMPETITORS}</span>
+                </label>
+                <ChipInput
+                  id="competitors"
+                  values={input.competitors}
+                  onChange={(v) => set("competitors", v)}
+                  max={MAX_COMPETITORS}
+                  reserved={[input.brand]}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </form>
   );
 }
